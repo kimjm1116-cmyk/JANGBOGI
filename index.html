@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2f6b4f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>회사 워크샵 장보기</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --paper: #fffdf8;
+      --ink: #1f2a24;
+      --muted: #6b746e;
+      --line: #e4ddd0;
+      --green: #2f6b4f;
+      --green-dark: #24553e;
+      --green-soft: #e7f2ea;
+      --shadow: 0 10px 28px rgba(47, 58, 43, 0.08);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: rgba(47, 107, 79, 0.18); }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #fff8ea 0%, transparent 50%),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100dvh;
+    }
+
+    button, input, select, label { font: inherit; touch-action: manipulation; }
+    button, input[type="checkbox"], .chip, .add-btn, .delete, .reset, .ghost, .primary {
+      cursor: pointer;
+    }
+    button { border: 0; background: none; color: inherit; }
+    button:active { transform: scale(0.98); }
+
+    .app {
+      width: min(520px, 100%);
+      margin: 0 auto;
+      min-height: 100dvh;
+      padding:
+        calc(14px + var(--safe-top))
+        14px
+        calc(168px + var(--safe-bottom));
+    }
+
+    .warn {
+      display: none;
+      margin-bottom: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #fff4d6;
+      color: #6a4b00;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .hero {
+      background: linear-gradient(160deg, var(--green) 0%, #3d8a64 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 20px 18px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-kicker { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.04em; opacity: 0.82; }
+    .hero h1 { margin: 0; font-size: 24px; line-height: 1.25; letter-spacing: -0.03em; }
+    .hero p { margin: 8px 0 0; font-size: 13px; line-height: 1.5; opacity: 0.88; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+    .stat {
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 10px 12px;
+    }
+    .stat span { display: block; font-size: 11px; opacity: 0.8; }
+    .stat strong { display: block; margin-top: 4px; font-size: 18px; letter-spacing: -0.03em; }
+
+    .toolbar { display: flex; gap: 8px; margin: 14px 0 8px; }
+    .chip {
+      flex: 1;
+      min-height: 44px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .chip.active {
+      background: var(--green-soft);
+      border-color: #b7d4c2;
+      color: var(--green-dark);
+    }
+
+    .category { margin-top: 16px; }
+    .category-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 4px 8px;
+      font-size: 14px;
+      color: var(--green-dark);
+    }
+    .category-title span { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid #eee6d8;
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 36px 1fr 124px 32px;
+      gap: 8px;
+      align-items: center;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .item:first-child { border-top: 0; }
+    .item.done { background: #f7f4ee; }
+    .item.done .item-name { color: var(--muted); text-decoration: line-through; }
+
+    .check {
+      width: 24px;
+      height: 24px;
+      margin: 0;
+      accent-color: var(--green);
+    }
+
+    .item-name { font-size: 14px; font-weight: 700; line-height: 1.35; word-break: keep-all; }
+    .item-qty { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--muted); }
+
+    .price-wrap {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: #f6f1e8;
+      border: 1px solid #eadfcd;
+      border-radius: 12px;
+      padding: 0 8px;
+      min-height: 44px;
+    }
+    .price-wrap em { font-style: normal; font-size: 12px; color: var(--muted); font-weight: 700; }
+    .price {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      text-align: right;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--green-dark);
+      outline: none;
+    }
+
+    .delete {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      color: #b08980;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .empty { padding: 22px 12px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    .dock {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: min(520px, 100%);
+      padding: 10px 14px calc(12px + var(--safe-bottom));
+      background: linear-gradient(180deg, rgba(243, 239, 230, 0) 0%, var(--bg) 22%);
+      z-index: 10;
+    }
+
+    .total-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #1f3d30;
+      color: #fff;
+      border-radius: 20px;
+      padding: 14px 16px;
+      box-shadow: 0 12px 30px rgba(31, 61, 48, 0.28);
+    }
+    .total-bar small { display: block; font-size: 11px; opacity: 0.75; }
+    .total-bar strong { display: block; margin-top: 2px; font-size: 24px; letter-spacing: -0.04em; }
+
+    .add-btn {
+      min-width: 86px;
+      min-height: 44px;
+      border-radius: 14px;
+      background: #f4c46b;
+      color: #3b2a0d;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .sheet-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(24, 28, 24, 0.42);
+      display: none;
+      z-index: 20;
+    }
+    .sheet-bg.open { display: block; }
+    .sheet {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: min(520px, 100%);
+      background: #fffdf8;
+      border-radius: 24px 24px 0 0;
+      padding: 18px 16px calc(18px + var(--safe-bottom));
+      box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.16);
+    }
+    .sheet h2 { margin: 0 0 14px; font-size: 18px; }
+    .field { margin-bottom: 10px; }
+    .field label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+    .field input, .field select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 14px;
+      padding: 0 12px;
+      outline: none;
+    }
+    .field input:focus, .field select:focus, .price-wrap:focus-within {
+      border-color: #8bb89c;
+      box-shadow: 0 0 0 3px rgba(47, 107, 79, 0.12);
+    }
+    .sheet-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; margin-top: 14px; }
+    .ghost, .primary { min-height: 48px; border-radius: 14px; font-weight: 800; }
+    .ghost { background: #efe8dc; color: #5c564c; }
+    .primary { background: var(--green); color: #fff; }
+    .menu { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .reset { font-size: 12px; color: var(--muted); text-decoration: underline; min-height: 32px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <noscript>
+      <div class="warn" style="display:block">
+        지금 화면은 미리보기라서 터치가 안 됩니다. 사파리에서 이 페이지를 다시 열어주세요.
+      </div>
+    </noscript>
+
+    <header class="hero">
+      <p class="hero-kicker">회사 워크샵 장보기 리스트</p>
+      <h1>장보면서 가격을<br />바로 넣으세요</h1>
+      <p>기본 품목이 들어 있고, 빠진 건 아래에서 바로 추가할 수 있어요. 구매한 건 체크하면 됩니다.</p>
+      <div class="stats">
+        <div class="stat">
+          <span>체크 완료</span>
+          <strong id="doneCount">0 / 25</strong>
+        </div>
+        <div class="stat">
+          <span>구매완료 금액</span>
+          <strong id="doneTotal">0원</strong>
+        </div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <button class="chip active" data-filter="all" type="button">전체</button>
+      <button class="chip" data-filter="todo" type="button">아직</button>
+      <button class="chip" data-filter="done" type="button">완료</button>
+    </div>
+
+    <main id="list">
+      <section class="category">
+        <h2 class="category-title">고기류 <span>2개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">한돈 삼겹살</div><span class="item-qty">5kg</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">한돈 목살</div><span class="item-qty">3kg</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+      <section class="category">
+        <h2 class="category-title">구이류 <span>2개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">소시지</div><span class="item-qty">1.5kg</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">버섯</div><span class="item-qty">적당량</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+      <section class="category">
+        <h2 class="category-title">채소/쌈류 <span>1개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">상추 · 깻잎 · 고추 · 마늘</div></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+      <section class="category">
+        <h2 class="category-title">양념/반찬류 <span>1개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">김치 · 쌈장 · 기름장</div><span class="item-qty">충분히</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+      <section class="category">
+        <h2 class="category-title">즉석식품 <span>4개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">햇반</div><span class="item-qty">24개</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">라면</div><span class="item-qty">20개</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">육포 / 먹태 / 오징어</div><span class="item-qty">3~4봉</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">노가리 / 쥐포</div><span class="item-qty">2~3봉</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+      <section class="category">
+        <h2 class="category-title">안주류 <span>6개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">나쵸 또는 감자칩</div><span class="item-qty">대용량 3봉</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">믹스넛</div><span class="item-qty">대용량 2봉</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">치즈 / 소시지 안주</div><span class="item-qty">2~3팩</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">과일</div><span class="item-qty">적당량</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">종이컵</div><span class="item-qty">100개</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">소주잔</div></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+      <section class="category">
+        <h2 class="category-title">소모품 <span>7개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">접시</div><span class="item-qty">30~40개</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">나무젓가락</div><span class="item-qty">30개</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">키친타월</div><span class="item-qty">3줄</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">물티슈</div><span class="item-qty">3~4개</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">위생장갑</div><span class="item-qty">2팩</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">일회용 포크</div></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">쓰레기봉투</div><span class="item-qty">적당량</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+      <section class="category">
+        <h2 class="category-title">모트 <span>2개</span></h2>
+        <div class="card">
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">맥주</div><span class="item-qty">1박스</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+          <div class="item"><input class="check" type="checkbox"><div><div class="item-name">프레첼 과자</div><span class="item-qty">오븐에서 먹을 수 있는 것</span></div><label class="price-wrap"><em>₩</em><input class="price" type="text" inputmode="numeric" placeholder="0"></label><span></span></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="menu">
+      <button class="reset" id="resetBtn" type="button">기본 리스트로 되돌리기</button>
+    </div>
+  </div>
+
+  <div class="dock">
+    <div class="total-bar">
+      <div>
+        <small>전체 합계</small>
+        <strong id="grandTotal">0원</strong>
+      </div>
+      <button class="add-btn" id="openSheet" type="button">+ 항목</button>
+    </div>
+  </div>
+
+  <div class="sheet-bg" id="sheetBg">
+    <form class="sheet" id="addForm">
+      <h2>항목 추가</h2>
+      <div class="field">
+        <label for="categorySelect">종류</label>
+        <select id="categorySelect"></select>
+      </div>
+      <div class="field" id="newCategoryField" hidden>
+        <label for="newCategory">새 종류 이름</label>
+        <input id="newCategory" type="text" placeholder="예: 음료" />
+      </div>
+      <div class="field">
+        <label for="itemName">품목</label>
+        <input id="itemName" type="text" placeholder="예: 생수 2L 6개" required />
+      </div>
+      <div class="field">
+        <label for="itemQty">추천 수량 (선택)</label>
+        <input id="itemQty" type="text" placeholder="예: 3봉, 적당량" />
+      </div>
+      <div class="sheet-actions">
+        <button class="ghost" id="closeSheet" type="button">닫기</button>
+        <button class="primary" type="submit">추가하기</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "workshop-shopping-list-v1";
+    const DEFAULT_ITEMS = [
+      { category: "고기류", name: "한돈 삼겹살", qty: "5kg" },
+      { category: "고기류", name: "한돈 목살", qty: "3kg" },
+      { category: "구이류", name: "소시지", qty: "1.5kg" },
+      { category: "구이류", name: "버섯", qty: "적당량" },
+      { category: "채소/쌈류", name: "상추 · 깻잎 · 고추 · 마늘", qty: "" },
+      { category: "양념/반찬류", name: "김치 · 쌈장 · 기름장", qty: "충분히" },
+      { category: "즉석식품", name: "햇반", qty: "24개" },
+      { category: "즉석식품", name: "라면", qty: "20개" },
+      { category: "즉석식품", name: "육포 / 먹태 / 오징어", qty: "3~4봉" },
+      { category: "즉석식품", name: "노가리 / 쥐포", qty: "2~3봉" },
+      { category: "안주류", name: "나쵸 또는 감자칩", qty: "대용량 3봉" },
+      { category: "안주류", name: "믹스넛", qty: "대용량 2봉" },
+      { category: "안주류", name: "치즈 / 소시지 안주", qty: "2~3팩" },
+      { category: "안주류", name: "과일", qty: "적당량" },
+      { category: "안주류", name: "종이컵", qty: "100개" },
+      { category: "안주류", name: "소주잔", qty: "" },
+      { category: "소모품", name: "접시", qty: "30~40개" },
+      { category: "소모품", name: "나무젓가락", qty: "30개" },
+      { category: "소모품", name: "키친타월", qty: "3줄" },
+      { category: "소모품", name: "물티슈", qty: "3~4개" },
+      { category: "소모품", name: "위생장갑", qty: "2팩" },
+      { category: "소모품", name: "일회용 포크", qty: "" },
+      { category: "소모품", name: "쓰레기봉투", qty: "적당량" },
+      { category: "모트", name: "맥주", qty: "1박스" },
+      { category: "모트", name: "프레첼 과자", qty: "오븐에서 먹을 수 있는 것" }
+    ];
+
+    const listEl = document.getElementById("list");
+    const doneCountEl = document.getElementById("doneCount");
+    const doneTotalEl = document.getElementById("doneTotal");
+    const grandTotalEl = document.getElementById("grandTotal");
+    const sheetBg = document.getElementById("sheetBg");
+    const addForm = document.getElementById("addForm");
+    const categorySelect = document.getElementById("categorySelect");
+    const newCategoryField = document.getElementById("newCategoryField");
+    const newCategoryInput = document.getElementById("newCategory");
+    const itemNameInput = document.getElementById("itemName");
+    const itemQtyInput = document.getElementById("itemQty");
+
+    let filter = "all";
+    let items = loadItems();
+
+    function createDefaultItems() {
+      return DEFAULT_ITEMS.map(function (item, index) {
+        return {
+          id: "default-" + index,
+          category: item.category,
+          name: item.name,
+          qty: item.qty,
+          price: "",
+          done: false
+        };
+      });
+    }
+
+    function loadItems() {
+      try {
+        var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        if (Array.isArray(saved) && saved.length) return saved;
+      } catch (error) {}
+      return createDefaultItems();
+    }
+
+    function saveItems() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      } catch (error) {}
+    }
+
+    function won(value) {
+      return (Number(value) || 0).toLocaleString("ko-KR") + "원";
+    }
+
+    function onlyDigits(value) {
+      return String(value || "").replace(/[^\d]/g, "");
+    }
+
+    function formatDigits(value) {
+      var digits = onlyDigits(value);
+      return digits ? Number(digits).toLocaleString("ko-KR") : "";
+    }
+
+    function categories() {
+      return items.map(function (item) { return item.category; }).filter(function (name, index, all) {
+        return all.indexOf(name) === index;
+      });
+    }
+
+    function visibleItems() {
+      return items.filter(function (item) {
+        if (filter === "todo") return !item.done;
+        if (filter === "done") return item.done;
+        return true;
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function toggleNewCategory() {
+      var show = categorySelect.value === "__new__";
+      newCategoryField.hidden = !show;
+      newCategoryInput.required = show;
+    }
+
+    function renderCategoryOptions() {
+      var current = categorySelect.value;
+      categorySelect.innerHTML = categories().map(function (name) {
+        return '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + "</option>";
+      }).join("") + '<option value="__new__">+ 새 종류 추가</option>';
+      var exists = false;
+      for (var i = 0; i < categorySelect.options.length; i += 1) {
+        if (categorySelect.options[i].value === current) exists = true;
+      }
+      if (exists) categorySelect.value = current;
+      toggleNewCategory();
+    }
+
+    function render() {
+      var grouped = [];
+      visibleItems().forEach(function (item) {
+        var found = grouped.filter(function (entry) { return entry.category === item.category; })[0];
+        if (!found) {
+          found = { category: item.category, items: [] };
+          grouped.push(found);
+        }
+        found.items.push(item);
+      });
+
+      if (!grouped.length) {
+        listEl.innerHTML = '<div class="card"><div class="empty">이 필터에 해당하는 항목이 없어요.</div></div>';
+      } else {
+        listEl.innerHTML = grouped.map(function (group) {
+          var rows = group.items.map(function (item) {
+            return '' +
+              '<div class="item' + (item.done ? " done" : "") + '" data-id="' + item.id + '">' +
+                '<input class="check" type="checkbox"' + (item.done ? " checked" : "") + ' aria-label="구매 완료">' +
+                "<div><div class=\"item-name\">" + escapeHtml(item.name) + "</div>" +
+                (item.qty ? '<span class="item-qty">' + escapeHtml(item.qty) + "</span>" : "") +
+                "</div>" +
+                '<label class="price-wrap"><em>₩</em>' +
+                '<input class="price" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" value="' + formatDigits(item.price) + '" aria-label="' + escapeHtml(item.name) + ' 가격">' +
+                "</label>" +
+                '<button class="delete" type="button" aria-label="삭제">×</button>' +
+              "</div>";
+          }).join("");
+          return '<section class="category"><h2 class="category-title">' + escapeHtml(group.category) + " <span>" + group.items.length + "개</span></h2><div class=\"card\">" + rows + "</div></section>";
+        }).join("");
+      }
+
+      var doneItems = items.filter(function (item) { return item.done; });
+      var grand = items.reduce(function (sum, item) { return sum + (Number(item.price) || 0); }, 0);
+      var doneSum = doneItems.reduce(function (sum, item) { return sum + (Number(item.price) || 0); }, 0);
+      doneCountEl.textContent = doneItems.length + " / " + items.length;
+      doneTotalEl.textContent = won(doneSum);
+      grandTotalEl.textContent = won(grand);
+      renderCategoryOptions();
+    }
+
+    function refreshTotals() {
+      var grand = items.reduce(function (sum, item) { return sum + (Number(item.price) || 0); }, 0);
+      var doneSum = items.filter(function (item) { return item.done; }).reduce(function (sum, item) { return sum + (Number(item.price) || 0); }, 0);
+      grandTotalEl.textContent = won(grand);
+      doneTotalEl.textContent = won(doneSum);
+    }
+
+    listEl.addEventListener("change", function (event) {
+      var row = event.target.closest(".item");
+      if (!row || !event.target.classList.contains("check")) return;
+      items = items.map(function (item) {
+        return item.id === row.dataset.id ? Object.assign({}, item, { done: event.target.checked }) : item;
+      });
+      saveItems();
+      render();
+    });
+
+    listEl.addEventListener("input", function (event) {
+      if (!event.target.classList.contains("price")) return;
+      var row = event.target.closest(".item");
+      var digits = onlyDigits(event.target.value);
+      event.target.value = formatDigits(digits);
+      items.forEach(function (item) {
+        if (item.id === row.dataset.id) item.price = digits;
+      });
+      saveItems();
+      refreshTotals();
+    });
+
+    listEl.addEventListener("click", function (event) {
+      if (!event.target.classList.contains("delete")) return;
+      var row = event.target.closest(".item");
+      var target = items.filter(function (item) { return item.id === row.dataset.id; })[0];
+      if (!target) return;
+      if (!confirm('"' + target.name + '" 항목을 삭제할까요?')) return;
+      items = items.filter(function (item) { return item.id !== row.dataset.id; });
+      saveItems();
+      render();
+    });
+
+    document.querySelectorAll(".chip").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        filter = chip.getAttribute("data-filter");
+        document.querySelectorAll(".chip").forEach(function (btn) {
+          btn.classList.toggle("active", btn === chip);
+        });
+        render();
+      });
+    });
+
+    function openSheet() {
+      sheetBg.classList.add("open");
+      itemNameInput.focus();
+    }
+
+    function closeSheet() {
+      sheetBg.classList.remove("open");
+      addForm.reset();
+      toggleNewCategory();
+    }
+
+    document.getElementById("openSheet").addEventListener("click", openSheet);
+    document.getElementById("closeSheet").addEventListener("click", closeSheet);
+    sheetBg.addEventListener("click", function (event) {
+      if (event.target === sheetBg) closeSheet();
+    });
+    categorySelect.addEventListener("change", toggleNewCategory);
+
+    addForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var category = categorySelect.value === "__new__" ? newCategoryInput.value.trim() : categorySelect.value;
+      var name = itemNameInput.value.trim();
+      var qty = itemQtyInput.value.trim();
+      if (!category || !name) return;
+      items.push({
+        id: "custom-" + Date.now(),
+        category: category,
+        name: name,
+        qty: qty,
+        price: "",
+        done: false
+      });
+      saveItems();
+      closeSheet();
+      render();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", function () {
+      if (!confirm("입력한 가격과 추가한 항목이 모두 사라지고, 기본 리스트로 돌아갑니다.")) return;
+      items = createDefaultItems();
+      saveItems();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
